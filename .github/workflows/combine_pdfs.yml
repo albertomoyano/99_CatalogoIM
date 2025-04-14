@@ -9,10 +9,14 @@ on:
 jobs:
   combine-pdfs:
     runs-on: ubuntu-latest
+    # ↓↓↓ Añade esta sección de permisos ↓↓↓
+    permissions:
+      contents: write  # Permiso explícito para escribir
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-        
+        uses: actions/checkout@v4  # Versión más reciente
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -34,5 +38,5 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add docs/
-          git commit -m "Actualizar PDF combinado" || echo "No hay cambios que actualizar"
-          git push
+          # ↓↓↓ Usa esta línea para el push ↓↓↓
+          git diff --quiet && git diff --cached --quiet || (git commit -m "Actualizar PDF combinado" && git push)
