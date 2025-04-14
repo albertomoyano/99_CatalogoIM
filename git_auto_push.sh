@@ -1,19 +1,20 @@
 #!/bin/bash
-
 # Colores para mejor visualización
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
-
 # Función para verificar cambios
 verificar_cambios() {
     git status --porcelain
 }
-
 # Función principal
 main() {
     echo -e "\n${YELLOW}=== GitHub Push Automático ===${NC}"
+    
+    # Configurar la estrategia de pull a merge
+    echo -e "\n${GREEN}» Configurando estrategia de pull a merge...${NC}"
+    git config pull.rebase false || { echo -e "${RED}✗ Error al configurar pull.rebase${NC}"; exit 1; }
     
     # Verificar cambios
     cambios=$(verificar_cambios)
@@ -21,7 +22,6 @@ main() {
         echo -e "\n${YELLOW}No hay cambios pendientes para subir.${NC}"
         exit 0
     fi
-
     # Mostrar cambios y pedir mensaje de commit
     echo -e "\n${GREEN}» Cambios pendientes:${NC}"
     echo "$cambios"
@@ -30,7 +30,6 @@ main() {
     mensaje_predeterminado="Actualización de archivos PDF"
     read -p $"Mensaje de commit [$mensaje_predeterminado]: " mensaje
     mensaje=${mensaje:-$mensaje_predeterminado}
-
     # Confirmación
     echo -e "\n${YELLOW}» Resumen de acciones:${NC}"
     echo -e "Mensaje de commit: '${mensaje}'"
@@ -42,14 +41,20 @@ main() {
         echo -e "\n${YELLOW}Operación cancelada.${NC}"
         exit 0
     fi
-
     # Ejecutar comandos Git
     echo -e "\n${GREEN}» Ejecutando git add...${NC}"
     git add . || { echo -e "${RED}✗ Error en git add${NC}"; exit 1; }
-
     echo -e "\n${GREEN}» Ejecutando git commit...${NC}"
     git commit -m "$mensaje" || { echo -e "${RED}✗ Error en git commit${NC}"; exit 1; }
-
+    
+    # Primero hacer pull para reconciliar las ramas divergentes
+    echo -e "\n${GREEN}» Ejecutando git pull para sincronizar con el remoto...${NC}"
+    git pull origin main || { 
+        echo -e "${RED}✗ Error en git pull${NC}"; 
+        echo -e "${YELLOW}Puede ser necesario resolver conflictos manualmente.${NC}";
+        exit 1;
+    }
+    
     echo -e "\n${GREEN}» Ejecutando git push...${NC}"
     if git push origin main; then
         echo -e "\n${GREEN}✓ ¡Push completado con éxito!${NC}"
@@ -61,6 +66,5 @@ main() {
         exit 1
     fi
 }
-
 # Ejecutar función principal
 main
