@@ -53,7 +53,7 @@ main() {
     echo -e "\n${GREEN}» Ejecutando git push...${NC}"
     if git push origin main; then
         echo -e "\n${GREEN}✓ ¡Push completado con éxito!${NC}"
-        echo -e "El PDF se regenerará automáticamente con GitHub Actions."
+        echo -e "El catálogo se regenerará automáticamente con GitHub Actions."
     else
         echo -e "\n${RED}✗ Error en git push${NC}"
         echo -e "Intenta manualmente con:"
