@@ -12,27 +12,29 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        
+        with:
+          persist-credentials: true
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-          
+
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y pdftk
           pip install PyPDF2
-          
+
       - name: Combinar PDFs por fecha
         run: |
           mkdir -p docs
           python .github/scripts/combine_pdfs.py
-          
+
       - name: Commit y push si hay cambios
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add docs/
           git commit -m "Actualizar PDF combinado" || echo "No hay cambios que actualizar"
-          git push
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
