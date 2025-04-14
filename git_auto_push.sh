@@ -13,28 +13,16 @@ verificar_cambios() {
 
 # Función principal
 main() {
-    echo -e "\n${YELLOW}=== GitHub Push Automático con Rebase ===${NC}"
+    echo -e "\n${YELLOW}=== GitHub Push Automático ===${NC}"
     
-    # Paso 1: Sincronizar con rebase
-    echo -e "\n${GREEN}» Sincronizando con el remoto (git pull --rebase)...${NC}"
-    if ! git pull origin main --rebase; then
-        echo -e "\n${RED}✗ Error durante el rebase:${NC}"
-        echo -e "Resuelve los conflictos manualmente y luego ejecuta:"
-        echo -e "1. Edita los archivos conflictivos (busca '<<<<<<<')"
-        echo -e "2. git add <archivos_resueltos>"
-        echo -e "3. git rebase --continue"
-        echo -e "4. Vuelve a ejecutar este script"
-        exit 1
-    fi
-
-    # Paso 2: Verificar cambios
+    # Verificar cambios
     cambios=$(verificar_cambios)
     if [ -z "$cambios" ]; then
         echo -e "\n${YELLOW}No hay cambios pendientes para subir.${NC}"
         exit 0
     fi
 
-    # Paso 3: Mostrar cambios y pedir mensaje de commit
+    # Mostrar cambios y pedir mensaje de commit
     echo -e "\n${GREEN}» Cambios pendientes:${NC}"
     echo "$cambios"
     echo -e "\n----------------------------------------"
@@ -43,7 +31,7 @@ main() {
     read -p $"Mensaje de commit [$mensaje_predeterminado]: " mensaje
     mensaje=${mensaje:-$mensaje_predeterminado}
 
-    # Paso 4: Confirmación
+    # Confirmación
     echo -e "\n${YELLOW}» Resumen de acciones:${NC}"
     echo -e "Mensaje de commit: '${mensaje}'"
     echo -e "Cambios a subir:"
@@ -55,7 +43,7 @@ main() {
         exit 0
     fi
 
-    # Paso 5: Ejecutar comandos Git
+    # Ejecutar comandos Git
     echo -e "\n${GREEN}» Ejecutando git add...${NC}"
     git add . || { echo -e "${RED}✗ Error en git add${NC}"; exit 1; }
 
@@ -64,7 +52,8 @@ main() {
 
     echo -e "\n${GREEN}» Ejecutando git push...${NC}"
     if git push origin main; then
-        echo -e "\n${GREEN}✓ ¡Proceso completado con éxito!${NC}"
+        echo -e "\n${GREEN}✓ ¡Push completado con éxito!${NC}"
+        echo -e "El PDF se regenerará automáticamente con GitHub Actions."
     else
         echo -e "\n${RED}✗ Error en git push${NC}"
         echo -e "Intenta manualmente con:"
