@@ -9,17 +9,10 @@ on:
 jobs:
   combine-pdfs:
     runs-on: ubuntu-latest
-    # ↓↓↓ Añade esto para repositorios privados ↓↓↓
-    permissions:
-      contents: write  # Permiso explícito para escribir
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          # ↓↓↓ Usa un Personal Access Token (PAT) en vez de GITHUB_TOKEN ↓↓↓
-          token: ${{ secrets.PAT }}  # ¡Crea este secreto! (ver instrucciones abajo)
-
+        uses: actions/checkout@v3
+        
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -41,6 +34,5 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add docs/
-          # ↓↓↓ Push con autenticación por token ↓↓↓
-          git diff --quiet && git diff --cached --quiet || (git commit -m "Actualizar PDF combinado" && git push https://x-access-token:${{ secrets.PAT }}@github.com/${{ github.repository }}.git HEAD:main)
-		  
+          git commit -m "Actualizar PDF combinado" || echo "No hay cambios que actualizar"
+          git push
