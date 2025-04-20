@@ -36,18 +36,18 @@ jobs:
     - name: Esperar estabilización del archivo
       run: sleep 5
 
-    - name: Crear Release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        name: "Catálogo Ediciones Imago Mundi - $(date +'%d-%m-%Y')"
-        body: |
-          📅 Generado automáticamente el $(date +'%d/%m/%Y a las %H:%M')
-          📄 Tamaño del archivo: ${{ env.PDF_SIZE }}
-          
-          Contiene todos los documentos combinados en orden cronológico.
-        tag_name: "release-$(date +'%Y%m%d-%H%M')"
-        files: ${{ env.PDF_PATH }}
-        draft: false
-        prerelease: false
+- name: Crear Release
+  uses: softprops/action-gh-release@v1
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    name: "Catálogo Ediciones Imago Mundi - $(date +'%d-%m-%Y')"
+    body: |
+      📅 Generado automáticamente el $(date +'%d/%m/%Y a las %H:%M')
+      📄 Tamaño del archivo: ${{ env.PDF_SIZE }}
+      
+      Contiene todos los documentos combinados en orden cronológico.
+    tag_name: "release-$(date +'%Y%m%d')"  # Cambio aquí
+    files: ${{ env.PDF_PATH }}
+    draft: false
+    prerelease: false
