@@ -14,44 +14,28 @@ jobs:
     timeout-minutes: 20
     
     steps:
-    # Paso 1: Obtener el código
     - name: Checkout repository
       uses: actions/checkout@v4
-      
-    # Paso 2: Configurar Python
+
+    - name: Verificar estructura de directorios
+      run: |
+        echo "Mostrando estructura de directorios:"
+        ls -R
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-        
-    # Paso 3: Instalar dependencias necesarias
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y pdftk
-        pip install PyPDF2
 
-    # Paso 4: Ejecutar script desde su ubicación correcta
-    - name: Combinar PDFs
-      id: combine
-      run: |
-        echo "Ejecutando script para combinar PDFs"
-        python ./github/scripts/combine_pdfs.py
-        
-        # Verificar que el PDF se generó
-        if [ ! -f "docs/Catálogo_Ediciones_Imago_Mundi.pdf" ]; then
-          echo "::error::El PDF no se generó en la ubicación esperada"
-          exit 1
-        fi
-        
-        echo "PDF_PATH=docs/Catálogo_Ediciones_Imago_Mundi.pdf" >> $GITHUB_ENV
-        echo "PDF_SIZE=$(du -h docs/Catálogo_Ediciones_Imago_Mundi.pdf | cut -f1)" >> $GITHUB_ENV
-      
-    # Paso 5: Esperar estabilización del archivo
+    - name: Install dependencies
+      run: pip install PyPDF2
+
+    - name: Ejecutar script para combinar PDFs
+      run: python .github/scripts/combine_pdfs.py
+
     - name: Esperar estabilización del archivo
       run: sleep 5
-      
-    # Paso 6: Crear Release
+
     - name: Crear Release
       uses: softprops/action-gh-release@v1
       env:
