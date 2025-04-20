@@ -46,6 +46,11 @@ jobs:
           echo "PDF_PATH=$PDF_PATH" >> $GITHUB_ENV
           echo "PDF_SIZE=$PDF_SIZE" >> $GITHUB_ENV
           echo "PDF encontrado en $PDF_PATH con tamaño $PDF_SIZE"
+          
+          # Generar fecha para el tag
+          echo "RELEASE_DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+          echo "DISPLAY_DATE=$(date +'%d-%m-%Y')" >> $GITHUB_ENV
+          echo "FULL_DATE=$(date +'%d/%m/%Y a las %H:%M')" >> $GITHUB_ENV
         else
           echo "Error: No se encontró el archivo PDF generado"
           ls -la
@@ -57,13 +62,13 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: "Catálogo Ediciones Imago Mundi - $(date +'%d-%m-%Y')"
+        name: "Catálogo Ediciones Imago Mundi - ${{ env.DISPLAY_DATE }}"
         body: |
-          📅 Generado automáticamente el $(date +'%d/%m/%Y a las %H:%M')
+          📅 Generado automáticamente el ${{ env.FULL_DATE }}
           📄 Tamaño del archivo: ${{ env.PDF_SIZE }}
           
           Contiene todos los documentos combinados en orden cronológico.
-        tag_name: "release-$(date +'%Y%m%d')"
+        tag_name: "release-${{ env.RELEASE_DATE }}"
         files: ${{ env.PDF_PATH }}
         draft: false
         prerelease: false
