@@ -1,50 +1,75 @@
-name: Generar y Publicar Catálogo Completo
+name: Generar y Publicar Catálogo
 
 on:
   push:
     paths:
-      - '**/*.pdf'  # Se activa con cambios en cualquier PDF
+      - '**/*.pdf'
     branches:
       - main
-  workflow_dispatch:  # Permite ejecución manual
+  workflow_dispatch:
 
 jobs:
-  procesar-pdfs:
+  procesar-y-publicar:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     
     steps:
     # Paso 1: Obtener el código
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    # Paso 2: Configurar Python (tu script ya funciona, solo aseguramos el entorno)
+    # Paso 2: Configurar Python
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
         
-    # Paso 3: Instalar EXACTAMENTE lo que tu script necesita
-    - name: Install PyPDF2
+    # Paso 3: Instalar dependencias
+    - name: Install dependencies
       run: pip install PyPDF2
       
-    # Paso 4: Ejecutar TU script combine_pdfs.py (sin modificaciones)
+    # Paso 4: Ejecutar tu script de combinación
     - name: Combinar PDFs
-      run: python combine_pdfs
-      
-    # Paso 5: Verificar que el PDF resultante existe
-    - name: Verificar PDF generado
+      id: combine
       run: |
-        if [ ! -f "docs/catalogo_ediciones_imago_mundi.pdf" ]; then
-          echo "::error::El PDF combinado no se generó correctamente"
+        python combine_pdfs.py
+        echo "PDF_PATH=docs/catalogo_ediciones_imago_mundi.pdf" >> $GITHUB_ENV
+        echo "PDF_SIZE=$(du -h docs/catalogo_ediciones_imago_mundi.pdf | cut -f1)" >> $GITHUB_ENV
+      
+    # Paso 5: Espera explícita para asegurar que el archivo esté listo
+    - name: Esperar estabilización del archivo
+      run: sleep 10
+      
+    # Paso 6: Verificación exhaustiva del PDF
+    - name: Validar PDF generado
+      run: |
+        if [ ! -f "$PDF_PATH" ]; then
+          echo "::error::El archivo PDF no se generó"
           exit 1
         fi
-        echo "✔ PDF generado correctamente"
         
-    # Paso 6: Crear el release con el PDF
+        if [ $(stat -c%s "$PDF_PATH") -lt 10000 ]; then
+          echo "::error::El PDF parece demasiado pequeño"
+          exit 1
+        fi
+        
+        echo "✔ PDF válido generado en $PDF_PATH"
+        echo "Tamaño: $PDF_SIZE"
+      
+    # Paso 7: Creación del release (con token explícito)
     - name: Crear Release
       uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: "Catálogo Completo - $(date +'%Y-%m-%d')"
-        body: "Versión consolidada generada automáticamente"
-        tag_name: "v$(date +'%Y-%m-%d')"
-        files: docs/catalogo_ediciones_imago_mundi.pdf
+        name: "Catálogo Ediciones Imago Mundi - $(date +'%d-%m-%Y')"
+        body: |
+          📅 Generado automáticamente el $(date +'%d/%m/%Y a las %H:%M')
+          📄 Tamaño del archivo: ${{ env.PDF_SIZE }}
+          
+          Contiene todos los documentos combinados en orden cronológico.
+        tag_name: "release-$(date +'%Y%m%d-%H%M')"
+        files: |
+          ${{ env.PDF_PATH }}
+        draft: false
+        prerelease: false
