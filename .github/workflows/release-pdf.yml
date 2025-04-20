@@ -1,31 +1,50 @@
-name: Create PDF Release
+name: Generar y Publicar Catálogo Completo
 
 on:
   push:
     paths:
-      - 'docs/catalogo_ediciones_imago_mundi.pdf'
+      - '**/*.pdf'  # Se activa con cambios en cualquier PDF
     branches:
-      - main  # o la rama principal de tu repo
+      - main
+  workflow_dispatch:  # Permite ejecución manual
 
 jobs:
-  create-release:
+  procesar-pdfs:
     runs-on: ubuntu-latest
     
     steps:
+    # Paso 1: Obtener el código
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    - name: Get current date
-      id: date
-      run: echo "RELEASE_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+    # Paso 2: Configurar Python (tu script ya funciona, solo aseguramos el entorno)
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    # Paso 3: Instalar EXACTAMENTE lo que tu script necesita
+    - name: Install PyPDF2
+      run: pip install PyPDF2
       
-    - name: Create Release
+    # Paso 4: Ejecutar TU script combine_pdfs.py (sin modificaciones)
+    - name: Combinar PDFs
+      run: python combine_pdfs
+      
+    # Paso 5: Verificar que el PDF resultante existe
+    - name: Verificar PDF generado
+      run: |
+        if [ ! -f "docs/catalogo_ediciones_imago_mundi.pdf" ]; then
+          echo "::error::El PDF combinado no se generó correctamente"
+          exit 1
+        fi
+        echo "✔ PDF generado correctamente"
+        
+    # Paso 6: Crear el release con el PDF
+    - name: Crear Release
       uses: softprops/action-gh-release@v1
       with:
-        name: "Catálogo Ediciones Imago Mundi - ${{ env.RELEASE_DATE }}"
-        body: "Versión compilada del catálogo completo. Generado automáticamente."
-        tag_name: "v${{ env.RELEASE_DATE }}"
-        files: |
-          docs/catalogo_ediciones_imago_mundi.pdf
-        draft: false
-        prerelease: false
+        name: "Catálogo Completo - $(date +'%Y-%m-%d')"
+        body: "Versión consolidada generada automáticamente"
+        tag_name: "v$(date +'%Y-%m-%d')"
+        files: docs/catalogo_ediciones_imago_mundi.pdf
