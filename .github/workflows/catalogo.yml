@@ -1,5 +1,4 @@
 name: Generar y Publicar Catálogo
-
 on:
   push:
     paths:
@@ -7,7 +6,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-
 jobs:
   procesar-y-publicar:
     runs-on: ubuntu-latest
@@ -16,38 +14,51 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
+    
     - name: Verificar estructura de directorios
       run: |
         echo "Mostrando estructura de directorios:"
         ls -R
-
+    
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-
+    
     - name: Install dependencies
       run: pip install PyPDF2
-
+    
     - name: Ejecutar script para combinar PDFs
       run: python .github/scripts/combine_pdfs.py
-
+    
     - name: Esperar estabilización del archivo
       run: sleep 5
-
-- name: Crear Release
-  uses: softprops/action-gh-release@v1
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  with:
-    name: "Catálogo Ediciones Imago Mundi - $(date +'%d-%m-%Y')"
-    body: |
-      📅 Generado automáticamente el $(date +'%d/%m/%Y a las %H:%M')
-      📄 Tamaño del archivo: ${{ env.PDF_SIZE }}
-      
-      Contiene todos los documentos combinados en orden cronológico.
-    tag_name: "release-$(date +'%Y%m%d')"  # Cambio aquí
-    files: ${{ env.PDF_PATH }}
-    draft: false
-    prerelease: false
+    
+    - name: Obtener información del PDF generado
+      id: pdf_info
+      run: |
+        PDF_PATH="catalogo_completo.pdf"  # Ajusta según cómo nombra tu script el archivo final
+        if [ -f "$PDF_PATH" ]; then
+          PDF_SIZE=$(du -h "$PDF_PATH" | cut -f1)
+          echo "PDF_PATH=$PDF_PATH" >> $GITHUB_ENV
+          echo "PDF_SIZE=$PDF_SIZE" >> $GITHUB_ENV
+        else
+          echo "Error: No se encontró el archivo PDF generado"
+          exit 1
+        fi
+    
+    - name: Crear Release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        name: "Catálogo Ediciones Imago Mundi - $(date +'%d-%m-%Y')"
+        body: |
+          📅 Generado automáticamente el $(date +'%d/%m/%Y a las %H:%M')
+          📄 Tamaño del archivo: ${{ env.PDF_SIZE }}
+          
+          Contiene todos los documentos combinados en orden cronológico.
+        tag_name: "release-$(date +'%Y%m%d')"
+        files: ${{ env.PDF_PATH }}
+        draft: false
+        prerelease: false
