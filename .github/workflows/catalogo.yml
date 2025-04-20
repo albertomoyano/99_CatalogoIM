@@ -1,67 +1,58 @@
-name: Generar Catálogo y Publicar
+name: Generar y publicar PDF
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - '**/*.pdf'
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    branches:
+      - main
 
 jobs:
-  generar-catalogo:
+  build-and-release:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - name: Clonar repositorio
+        uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Instalar dependencias
-        run: pip install PyPDF2
-
-      - name: Ejecutar script de combinación
-        id: combine
+      - name: Instalar dependencias necesarias
         run: |
-          python .github/scripts/combine_pdfs.py
+          sudo apt-get update
+          sudo apt-get install -y texlive-full
 
-          if [ ! -f "docs/catalogo_ediciones_imago_mundi.pdf" ]; then
-            echo "::error::El PDF combinado no se generó"
-            exit 1
-          fi
-
-          echo "PDF_PATH=docs/catalogo_ediciones_imago_mundi.pdf" >> $GITHUB_ENV
-          echo "PDF_SIZE=$(du -h docs/catalogo_ediciones_imago_mundi.pdf | cut -f1)" >> $GITHUB_ENV
-
-      - name: Hacer commit si hay cambios
-        id: commit_changes
+      - name: Compilar archivo principal .tex
         run: |
-          git config --local user.name "GitHub Actions"
-          git config --local user.email "action@github.com"
-          git add docs/
-          git diff --quiet && git diff --cached --quiet || (git commit -m "Actualizar catálogo combinado" && git push && echo "changes=true" >> $GITHUB_OUTPUT)
+          latexmk -pdf -interaction=nonstopmode -shell-escape main.tex
 
-      - name: Crear release si hay cambios
-        if: steps.commit_changes.outputs.changes == 'true'
+      - name: Mover PDF compilado
+        run: |
+          mkdir -p release
+          mv main.pdf release/ediciones-imago-mundi.pdf
+
+      - name: Calcular tamaño del PDF
+        id: pdf_size
+        run: |
+          SIZE=$(du -h release/ediciones-imago-mundi.pdf | cut -f1)
+          echo "PDF_SIZE=$SIZE" >> $GITHUB_ENV
+          echo "PDF_PATH=release/ediciones-imago-mundi.pdf" >> $GITHUB_ENV
+
+      - name: Generar nombre y tag del Release
+        run: |
+          FECHA=$(date +'%d-%m-%Y')
+          TAG="release-$(date +'%Y%m%d-%H%M')"
+          echo "RELEASE_NAME=Catálogo Ediciones Imago Mundi - $FECHA" >> $GITHUB_ENV
+          echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Crear Release
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: "Catálogo Ediciones Imago Mundi - $(date +'%d-%m-%Y')"
+          name: ${{ env.RELEASE_NAME }}
+          tag_name: ${{ env.RELEASE_TAG }}
           body: |
-            📅 Generado automáticamente el $(date +'%d/%m/%Y a las %H:%M')
+            📅 Generado automáticamente el ${{ env.RELEASE_NAME }}
             📄 Tamaño del archivo: ${{ env.PDF_SIZE }}
 
             Contiene todos los documentos combinados en orden cronológico.
-          tag_name: "release-$(date +'%Y%m%d-%H%M')"
           files: ${{ env.PDF_PATH }}
           draft: false
           prerelease: false
-
