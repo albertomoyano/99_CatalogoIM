@@ -1,0 +1,67 @@
+name: Generar Catálogo y Publicar
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**/*.pdf'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generar-catalogo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Instalar dependencias
+        run: pip install PyPDF2
+
+      - name: Ejecutar script de combinación
+        id: combine
+        run: |
+          python .github/scripts/combine_pdfs.py
+
+          if [ ! -f "docs/catalogo_ediciones_imago_mundi.pdf" ]; then
+            echo "::error::El PDF combinado no se generó"
+            exit 1
+          fi
+
+          echo "PDF_PATH=docs/catalogo_ediciones_imago_mundi.pdf" >> $GITHUB_ENV
+          echo "PDF_SIZE=$(du -h docs/catalogo_ediciones_imago_mundi.pdf | cut -f1)" >> $GITHUB_ENV
+
+      - name: Hacer commit si hay cambios
+        id: commit_changes
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "action@github.com"
+          git add docs/
+          git diff --quiet && git diff --cached --quiet || (git commit -m "Actualizar catálogo combinado" && git push && echo "changes=true" >> $GITHUB_OUTPUT)
+
+      - name: Crear release si hay cambios
+        if: steps.commit_changes.outputs.changes == 'true'
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: "Catálogo Ediciones Imago Mundi - $(date +'%d-%m-%Y')"
+          body: |
+            📅 Generado automáticamente el $(date +'%d/%m/%Y a las %H:%M')
+            📄 Tamaño del archivo: ${{ env.PDF_SIZE }}
+
+            Contiene todos los documentos combinados en orden cronológico.
+          tag_name: "release-$(date +'%Y%m%d-%H%M')"
+          files: ${{ env.PDF_PATH }}
+          draft: false
+          prerelease: false
+

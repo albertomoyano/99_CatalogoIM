@@ -23,13 +23,19 @@ def extract_sort_key(filename):
 # Buscar y filtrar archivos PDF
 pdf_files = [
     file for file in glob.glob(os.path.join(repo_dir, "**/*.pdf"), recursive=True)
-    if not file.startswith(output_dir) 
+    if not file.startswith(output_dir)
     and not ".github" in file
     and not os.path.dirname(file).endswith("/docs")  # Ignorar /docs local
+    and not file.endswith("catalogo_ediciones_imago_mundi.pdf")  # Evitar recursión
 ]
 
 # Ordenar archivos
 pdf_files.sort(key=extract_sort_key, reverse=True)
+
+# Mostrar lista de archivos combinados
+print("\nArchivos que se van a combinar:")
+for f in pdf_files:
+    print(f)
 
 # Combinar PDFs
 merger = PyPDF2.PdfMerger()
