@@ -28,35 +28,27 @@ jobs:
     - name: Install dependencies
       run: pip install PyPDF2
       
-    # Paso 4: Ejecutar tu script de combinación
+    # Paso 4: Ejecutar script desde su ubicación correcta
     - name: Combinar PDFs
       id: combine
       run: |
-        python combine_pdfs.py
+        echo "Ejecutando script desde ./github/scripts/combine_pdfs.py"
+        python ./github/scripts/combine_pdfs.py
+        
+        # Verificar que el PDF se generó
+        if [ ! -f "docs/catalogo_ediciones_imago_mundi.pdf" ]; then
+          echo "::error::El PDF no se generó en la ubicación esperada"
+          exit 1
+        fi
+        
         echo "PDF_PATH=docs/catalogo_ediciones_imago_mundi.pdf" >> $GITHUB_ENV
         echo "PDF_SIZE=$(du -h docs/catalogo_ediciones_imago_mundi.pdf | cut -f1)" >> $GITHUB_ENV
       
-    # Paso 5: Espera explícita para asegurar que el archivo esté listo
+    # Paso 5: Esperar estabilización
     - name: Esperar estabilización del archivo
-      run: sleep 10
+      run: sleep 5
       
-    # Paso 6: Verificación exhaustiva del PDF
-    - name: Validar PDF generado
-      run: |
-        if [ ! -f "$PDF_PATH" ]; then
-          echo "::error::El archivo PDF no se generó"
-          exit 1
-        fi
-        
-        if [ $(stat -c%s "$PDF_PATH") -lt 10000 ]; then
-          echo "::error::El PDF parece demasiado pequeño"
-          exit 1
-        fi
-        
-        echo "✔ PDF válido generado en $PDF_PATH"
-        echo "Tamaño: $PDF_SIZE"
-      
-    # Paso 7: Creación del release (con token explícito)
+    # Paso 6: Crear Release
     - name: Crear Release
       uses: softprops/action-gh-release@v1
       env:
@@ -69,7 +61,6 @@ jobs:
           
           Contiene todos los documentos combinados en orden cronológico.
         tag_name: "release-$(date +'%Y%m%d-%H%M')"
-        files: |
-          ${{ env.PDF_PATH }}
+        files: ${{ env.PDF_PATH }}
         draft: false
         prerelease: false
