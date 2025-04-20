@@ -6,11 +6,7 @@ import glob
 # Configuración de directorios
 script_dir = os.path.dirname(os.path.abspath(__file__))
 repo_dir = os.path.abspath(os.path.join(script_dir, "../.."))
-output_dir = os.path.join(repo_dir, "docs")
-output_file = os.path.join(output_dir, "catalogo_ediciones_imago_mundi.pdf")
-
-# Crear directorio de salida si no existe
-os.makedirs(output_dir, exist_ok=True)
+output_file = os.path.join(repo_dir, "catalogo_completo.pdf")  # Cambiado para coincidir con el workflow
 
 # Función para extraer clave de ordenamiento
 def extract_sort_key(filename):
@@ -23,11 +19,20 @@ def extract_sort_key(filename):
 # Buscar y filtrar archivos PDF
 pdf_files = [
     file for file in glob.glob(os.path.join(repo_dir, "**/*.pdf"), recursive=True)
-    if not file.startswith(output_dir)
-    and not ".github" in file
-    and not os.path.dirname(file).endswith("/docs")  # Ignorar /docs local
-    and not file.endswith("catalogo_ediciones_imago_mundi.pdf")  # Evitar recursión
+    if not ".github" in file
+    and not file.endswith("catalogo_completo.pdf")  # Evitar recursión
+    and os.path.isfile(file)  # Verificar que el archivo existe
 ]
+
+# Verificar que se encontraron archivos
+if not pdf_files:
+    print("⚠️ No se encontraron archivos PDF para combinar")
+    # Crear un PDF vacío para evitar errores
+    with open(output_file, 'wb') as f:
+        merger = PyPDF2.PdfMerger()
+        merger.write(f)
+    print(f"► Se ha creado un PDF vacío en: {output_file}")
+    exit(0)
 
 # Ordenar archivos
 pdf_files.sort(key=extract_sort_key, reverse=True)
@@ -47,10 +52,12 @@ for pdf in pdf_files:
         print(f"✗ Error en {os.path.basename(pdf)}: {str(e)}")
 
 # Guardar resultado
-merger.write(output_file)
-merger.close()
-
-print(f"\n► PDF combinado generado en: {output_file}")
-print("Orden de combinación:")
-for i, pdf in enumerate(pdf_files, 1):
-    print(f"{i}. {os.path.basename(pdf)}")
+try:
+    merger.write(output_file)
+    merger.close()
+    print(f"\n► PDF combinado generado en: {output_file}")
+    print("Orden de combinación:")
+    for i, pdf in enumerate(pdf_files, 1):
+        print(f"{i}. {os.path.basename(pdf)}")
+except Exception as e:
+    print(f"Error al guardar el PDF combinado: {str(e)}")

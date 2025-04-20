@@ -29,7 +29,10 @@ jobs:
       run: pip install PyPDF2
     
     - name: Ejecutar script para combinar PDFs
-      run: python .github/scripts/combine_pdfs.py
+      run: |
+        python .github/scripts/combine_pdfs.py
+        echo "Verificando si el PDF fue generado:"
+        ls -la catalogo_completo.pdf || echo "No se encontró el archivo"
     
     - name: Esperar estabilización del archivo
       run: sleep 5
@@ -37,13 +40,15 @@ jobs:
     - name: Obtener información del PDF generado
       id: pdf_info
       run: |
-        PDF_PATH="catalogo_completo.pdf"  # Ajusta según cómo nombra tu script el archivo final
+        PDF_PATH="catalogo_completo.pdf"
         if [ -f "$PDF_PATH" ]; then
           PDF_SIZE=$(du -h "$PDF_PATH" | cut -f1)
           echo "PDF_PATH=$PDF_PATH" >> $GITHUB_ENV
           echo "PDF_SIZE=$PDF_SIZE" >> $GITHUB_ENV
+          echo "PDF encontrado en $PDF_PATH con tamaño $PDF_SIZE"
         else
           echo "Error: No se encontró el archivo PDF generado"
+          ls -la
           exit 1
         fi
     
