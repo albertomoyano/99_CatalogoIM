@@ -1,70 +1,87 @@
 #!/bin/bash
-# Colores para mejor visualización
+
+# Configuración de colores
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
+
 # Función para verificar cambios
 verificar_cambios() {
     git status --porcelain
 }
-# Función principal
+
 main() {
     echo -e "\n${YELLOW}=== GitHub Push Automático ===${NC}"
     
-    # Configurar la estrategia de pull a merge
-    echo -e "\n${GREEN}» Configurando estrategia de pull a merge...${NC}"
-    git config pull.rebase false || { echo -e "${RED}✗ Error al configurar pull.rebase${NC}"; exit 1; }
-    
+    # Configurar estrategia de pull
+    git config pull.rebase false || {
+        echo -e "${RED}✗ Error al configurar pull.rebase${NC}"
+        exit 1
+    }
+
+    # Eliminar docs/ del seguimiento
+    echo -e "\n${GREEN}» Limpiando carpeta docs/ local...${NC}"
+    git rm -r --cached docs/ 2>/dev/null || echo -e "${YELLOW}ℹ No hay docs/ en el índice${NC}"
+
     # Verificar cambios
     cambios=$(verificar_cambios)
     if [ -z "$cambios" ]; then
-        echo -e "\n${YELLOW}No hay cambios pendientes para subir.${NC}"
+        echo -e "\n${YELLOW}No hay cambios pendientes.${NC}"
         exit 0
     fi
-    # Mostrar cambios y pedir mensaje de commit
-    echo -e "\n${GREEN}» Cambios pendientes:${NC}"
+
+    # Mostrar cambios
+    echo -e "\n${GREEN}» Cambios detectados:${NC}"
     echo "$cambios"
     echo -e "\n----------------------------------------"
     
-    mensaje_predeterminado="Actualización de archivos PDF"
+    # Solicitar mensaje de commit
+    mensaje_predeterminado="Actualización automática de PDFs"
     read -p $"Mensaje de commit [$mensaje_predeterminado]: " mensaje
     mensaje=${mensaje:-$mensaje_predeterminado}
+
     # Confirmación
-    echo -e "\n${YELLOW}» Resumen de acciones:${NC}"
-    echo -e "Mensaje de commit: '${mensaje}'"
-    echo -e "Cambios a subir:"
+    echo -e "\n${YELLOW}» Resumen:${NC}"
+    echo -e "Commit: ${mensaje}"
+    echo -e "Cambios:"
     echo "$cambios"
     
     read -p $"\n¿Continuar? (s/n): " confirmacion
-    if [[ "$confirmacion" != "s" && "$confirmacion" != "S" ]]; then
+    [[ "$confirmacion" =~ ^[sS]$ ]] || {
         echo -e "\n${YELLOW}Operación cancelada.${NC}"
         exit 0
-    fi
-    # Ejecutar comandos Git
-    echo -e "\n${GREEN}» Ejecutando git add...${NC}"
-    git add . || { echo -e "${RED}✗ Error en git add${NC}"; exit 1; }
-    echo -e "\n${GREEN}» Ejecutando git commit...${NC}"
-    git commit -m "$mensaje" || { echo -e "${RED}✗ Error en git commit${NC}"; exit 1; }
-    
-    # Primero hacer pull para reconciliar las ramas divergentes
-    echo -e "\n${GREEN}» Ejecutando git pull para sincronizar con el remoto...${NC}"
-    git pull origin main || { 
-        echo -e "${RED}✗ Error en git pull${NC}"; 
-        echo -e "${YELLOW}Puede ser necesario resolver conflictos manualmente.${NC}";
-        exit 1;
     }
-    
-    echo -e "\n${GREEN}» Ejecutando git push...${NC}"
-    if git push origin main; then
-        echo -e "\n${GREEN}✓ ¡Push completado con éxito!${NC}"
-        echo -e "El catálogo se regenerará automáticamente con GitHub Actions."
-    else
-        echo -e "\n${RED}✗ Error en git push${NC}"
-        echo -e "Intenta manualmente con:"
-        echo -e "git push origin main"
+
+    # Ejecutar Git commands
+    echo -e "\n${GREEN}» Añadiendo cambios...${NC}"
+    git add . || {
+        echo -e "${RED}✗ Error en git add${NC}"
         exit 1
-    fi
+    }
+
+    echo -e "\n${GREEN}» Creando commit...${NC}"
+    git commit -m "$mensaje" || {
+        echo -e "${RED}✗ Error en git commit${NC}"
+        exit 1
+    }
+
+    # Sincronizar con remoto
+    echo -e "\n${GREEN}» Sincronizando con GitHub...${NC}"
+    git pull origin main || {
+        echo -e "${RED}✗ Error en git pull${NC}"
+        echo -e "${YELLOW}Resuelve conflictos manualmente y vuelve a intentar.${NC}"
+        exit 1
+    }
+
+    git push origin main && {
+        echo -e "\n${GREEN}✓ Push completado!${NC}"
+        echo -e "El PDF combinado se generará automáticamente en GitHub."
+    } || {
+        echo -e "\n${RED}✗ Error en git push${NC}"
+        echo -e "Intenta manualmente con: git push origin main"
+        exit 1
+    }
 }
-# Ejecutar función principal
+
 main
